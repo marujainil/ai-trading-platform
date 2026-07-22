@@ -1,7 +1,6 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager, suppress
-
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -59,6 +58,22 @@ app.add_middleware(
 )
 
 app.include_router(router, prefix="/api")
+
+
+@app.get("/ui", include_in_schema=False)
+def ui_dashboard():
+    """The self-configuring dashboard (index.html), wherever it was uploaded."""
+    here = Path(__file__).parent
+    candidates = (
+        STATIC_DIR / "index.html",   # backend/app/static/index.html
+        here / "index.html",         # backend/app/index.html
+        here.parent / "index.html",  # backend/index.html
+        Path.cwd() / "index.html",   # wherever the server was started from
+    )
+    for path in candidates:
+        if path.exists():
+            return FileResponse(path)
+    return {"error": "index.html not found — upload it into the backend folder on GitHub"}
 
 
 @app.get("/", include_in_schema=False)
