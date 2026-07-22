@@ -1,18 +1,10 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager, suppress
-
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -67,18 +59,23 @@ app.add_middleware(
 
 app.include_router(router, prefix="/api")
 
-import os
-from fastapi.responses import FileResponse
 
 @app.get("/ui", include_in_schema=False)
-def dashboard():
-    here = os.path.dirname(os.path.abspath(__file__))
-    for path in (os.path.join(here, "index.html"),
-                 os.path.join(here, "..", "index.html"),
-                 os.path.join(os.getcwd(), "index.html")):
-        if os.path.exists(path):
+def ui_dashboard():
+    """The self-configuring dashboard (index.html), wherever it was uploaded."""
+    here = Path(__file__).parent
+    candidates = (
+        STATIC_DIR / "index.html",   # backend/app/static/index.html
+        here / "index.html",         # backend/app/index.html
+        here.parent / "index.html",  # backend/index.html
+        Path.cwd() / "index.html",   # wherever the server was started from
+    )
+    for path in candidates:
+        if path.exists():
             return FileResponse(path)
-    return {"error": "index.html not found - upload it into the backend folder"}
+    return {"error": "index.html not found — upload it into the backend folder on GitHub"}
+
+
 @app.get("/", include_in_schema=False)
 def root():
     """The visual dashboard. API docs remain at /docs."""
