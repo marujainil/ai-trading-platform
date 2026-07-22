@@ -67,7 +67,18 @@ app.add_middleware(
 
 app.include_router(router, prefix="/api")
 
+import os
+from fastapi.responses import FileResponse
 
+@app.get("/ui", include_in_schema=False)
+def dashboard():
+    here = os.path.dirname(os.path.abspath(__file__))
+    for path in (os.path.join(here, "index.html"),
+                 os.path.join(here, "..", "index.html"),
+                 os.path.join(os.getcwd(), "index.html")):
+        if os.path.exists(path):
+            return FileResponse(path)
+    return {"error": "index.html not found - upload it into the backend folder"}
 @app.get("/", include_in_schema=False)
 def root():
     """The visual dashboard. API docs remain at /docs."""
