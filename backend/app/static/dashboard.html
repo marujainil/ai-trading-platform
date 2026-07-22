@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Trading Advisor</title>
+<style>
+  :root{
+    --bg:#0b0e14; --bg2:#111622; --card:#141b28; --card2:#1b2331; --line:#26304a;
+    --text:#eef2f9; --muted:#8b96ad; --dim:#5f6b83;
+    --green:#22c55e; --red:#ef4444; --amber:#f59e0b; --blue:#3b82f6; --cyan:#22d3ee; --violet:#8b5cf6;
+    --radius:16px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:radial-gradient(1200px 600px at 70% -10%,#16203a 0%,var(--bg) 55%);
+    color:var(--text);font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;min-height:100vh}
+  a{color:var(--blue);text-decoration:none}
+  .wrap{max-width:1120px;margin:0 auto;padding:20px 18px 60px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+  .brand{display:flex;align-items:center;gap:11px;font-weight:800;font-size:20px;letter-spacing:-.3px}
+  .brand .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--blue),var(--violet));display:grid;place-items:center;font-size:18px}
+  .brand .tag{font-size:11px;font-weight:600;color:var(--muted);background:var(--card2);border:1px solid var(--line);padding:3px 9px;border-radius:999px;letter-spacing:.3px}
+  .stats{display:flex;gap:8px;flex-wrap:wrap}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:7px 13px;font-size:13px}
+  .stat b{display:block;font-size:14px;margin-top:1px}
+  .tabs{display:flex;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:5px;margin-bottom:20px;width:fit-content;flex-wrap:wrap}
+  .tabs button{background:transparent;border:none;color:var(--muted);padding:9px 18px;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600;transition:.15s}
+  .tabs button.active{background:linear-gradient(135deg,var(--blue),var(--violet));color:#fff}
+  .view{display:none;animation:fade .25s ease}.view.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .hero{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px;margin-bottom:18px}
+  .hero h1{margin:0 0 4px;font-size:22px;letter-spacing:-.4px}
+  .hero p{margin:0 0 16px;color:var(--muted);font-size:14px}
+  .searchbar{display:flex;gap:10px;flex-wrap:wrap}
+  .searchbar input{flex:1;min-width:220px;background:var(--bg2);border:1.5px solid var(--line);color:var(--text);padding:14px 16px;border-radius:12px;font-size:16px;outline:none;transition:.15s}
+  .searchbar input:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+  .btn{background:linear-gradient(135deg,var(--blue),var(--violet));border:none;color:#fff;padding:0 26px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;transition:.15s;min-height:48px}
+  .btn:disabled{opacity:.55;cursor:wait}
+  .btn.ghost{background:var(--card2);border:1px solid var(--line);color:var(--text)}
+  .btn.green{background:linear-gradient(135deg,#16a34a,#22c55e)}
+  .btn.red{background:linear-gradient(135deg,#dc2626,#ef4444)}
+  .browse .lbl{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-weight:700;margin:16px 0 9px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;max-height:118px;overflow:hidden;transition:max-height .3s}
+  .chips.open{max-height:62vh;overflow-y:auto;padding-right:4px}
+  .chip{background:var(--card2);border:1px solid var(--line);color:var(--text);padding:8px 13px;border-radius:10px;cursor:pointer;font-size:13px;font-weight:600;transition:.12s;display:flex;align-items:center;gap:7px}
+  .chip:hover{border-color:var(--blue);background:#1e2740;transform:translateY(-1px)}
+  .chip .sub{color:var(--dim);font-weight:500;font-size:11px}
+  .more{background:none;border:none;color:var(--blue);cursor:pointer;font-size:13px;font-weight:600;padding:8px 4px}
+  #result{display:none}
+  .verdict{border:1px solid var(--line);border-radius:var(--radius);padding:24px;margin-bottom:16px}
+  .verdict.BUY{border-color:rgba(34,197,94,.5);background:linear-gradient(180deg,rgba(34,197,94,.08),transparent 60%),var(--card)}
+  .verdict.SELL{border-color:rgba(239,68,68,.5);background:linear-gradient(180deg,rgba(239,68,68,.08),transparent 60%),var(--card)}
+  .verdict.HOLD{border-color:rgba(245,158,11,.5);background:linear-gradient(180deg,rgba(245,158,11,.08),transparent 60%),var(--card)}
+  .vtop{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  .vname b{color:var(--text);font-size:20px;display:block;letter-spacing:-.3px}
+  .vprice{font-size:34px;font-weight:800;letter-spacing:-1px;margin-top:2px}
+  .vbadge{padding:14px 28px;border-radius:14px;font-size:30px;font-weight:900;letter-spacing:-.5px;text-align:center}
+  .vbadge small{display:block;font-size:12px;font-weight:600;opacity:.85;letter-spacing:.3px;margin-top:2px}
+  .vbadge.BUY{background:rgba(34,197,94,.16);color:#4ade80;border:1.5px solid rgba(34,197,94,.5)}
+  .vbadge.SELL{background:rgba(239,68,68,.16);color:#f87171;border:1.5px solid rgba(239,68,68,.5)}
+  .vbadge.HOLD{background:rgba(245,158,11,.16);color:#fbbf24;border:1.5px solid rgba(245,158,11,.5)}
+  .vsummary{margin:16px 0 0;font-size:16px;line-height:1.5}
+  .vmeters{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:18px}
+  .meter{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .meter .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:700}
+  .meter .v{font-size:22px;font-weight:800;margin-top:3px}
+  .actions{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+  .grid{display:grid;gap:16px}
+  @media(min-width:880px){.g2{grid-template-columns:1fr 1fr}.g12{grid-template-columns:1.4fr 1fr}}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+  .card h3{margin:0 0 14px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;font-weight:700}
+  .plan{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:10px}
+  .plan .box{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:12px;text-align:center}
+  .plan .box .l{font-size:11px;color:var(--muted);font-weight:600}
+  .plan .box .v{font-size:17px;font-weight:800;margin-top:3px}
+  .factor{display:grid;grid-template-columns:96px 40px 1fr 40px;align-items:center;gap:11px;margin:11px 0}
+  .factor .name{font-size:13px;font-weight:600}.factor .w{font-size:11px;color:var(--dim);text-align:right}
+  .track{height:9px;background:var(--bg2);border-radius:6px;overflow:hidden}
+  .track i{display:block;height:100%;border-radius:6px;transition:width .6s}
+  .factor .sc{font-size:14px;font-weight:800;text-align:right}
+  ul.reasons{margin:0;padding:0;list-style:none}
+  ul.reasons li{padding:9px 0;border-bottom:1px solid var(--line);font-size:13.5px;display:flex;gap:9px}
+  ul.reasons li:last-child{border:none}
+  ul.reasons li::before{content:"→";color:var(--blue);font-weight:700;flex-shrink:0}
+  .tfrow{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+  .tf{background:var(--bg2);border:1px solid var(--line);color:var(--muted);padding:6px 13px;border-radius:9px;cursor:pointer;font-size:12px;font-weight:700}
+  .tf.active{color:#fff;border-color:var(--blue);background:rgba(59,130,246,.16)}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-bottom:10px}
+  .dot{width:11px;height:11px;border-radius:3px;display:inline-block;margin-right:5px;vertical-align:-1px}
+  .chartbox{width:100%;height:400px}.rsibox{width:100%;height:96px}
+  .newshead{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .senti{padding:5px 13px;border-radius:999px;font-size:12px;font-weight:800}
+  .news-item{padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+  .news-item:last-child{border:none}
+  .kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+  .kv .cell{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .kv .cell .l{font-size:11px;color:var(--muted);font-weight:600}
+  .kv .cell .v{font-size:16px;font-weight:800;margin-top:2px}
+  .muted{color:var(--muted)}.small{font-size:12.5px}
+  .disc{font-size:12px;color:var(--dim);text-align:center;margin-top:18px;padding:0 10px}
+  .empty{text-align:center;color:var(--muted);padding:40px 20px}
+  .spin{width:16px;height:16px;border:2px solid var(--dim);border-top-color:var(--blue);border-radius:50%;display:inline-block;animation:sp .7s linear infinite;vertical-align:-3px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#2a1620;border:1px solid var(--red);color:#ffdada;padding:12px 20px;border-radius:12px;display:none;z-index:60;max-width:92%;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+  #toast.ok{background:#0f2a1a;border-color:var(--green);color:#c9ffdb}
+  .apbar{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+  .aplight{display:flex;align-items:center;gap:10px}
+  .apdot{width:13px;height:13px;border-radius:50%;background:var(--dim)}
+  .feed{max-height:440px;overflow-y:auto}
+  .fitem{border-left:3px solid var(--line);padding:8px 12px;margin:8px 0;font-size:13px;border-radius:0 8px 8px 0}
+  .pill{font-size:12px;padding:4px 11px;border-radius:999px;border:1px solid var(--line);background:var(--card2)}
+  label.fld{font-size:12.5px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+  label.fld input,label.fld select{background:var(--bg2);border:1px solid var(--line);color:var(--text);padding:8px 10px;border-radius:9px;font-size:13px}
+  .set-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><span class="logo">📈</span> AI Trading Advisor
+      <span class="tag">PAPER · LIVE DATA</span></div>
+    <div class="stats">
+      <div class="stat">Market (NIFTY) <b id="sRegime">…</b></div>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button data-v="advisor" class="active">🔍 Advisor</button>
+    <button data-v="backtest">⏮ Backtest</button>
+    <button data-v="help">❓ Guide</button>
+  </div>
+
+  <section id="v-advisor" class="view active">
+    <div class="hero">
+      <h1>Should I buy, sell, or hold?</h1>
+      <p>Pick any Indian stock or crypto. The AI runs deep technical + fundamental + news analysis and gives a clear verdict.</p>
+      <div class="searchbar">
+        <input id="q" list="qlist" placeholder="Search a stock or crypto — e.g. RELIANCE.NS, INFY.NS, BTC-USD">
+        <datalist id="qlist"></datalist>
+        <button class="btn" id="goBtn" onclick="analyze()">Analyze</button>
+      </div>
+      <div class="browse">
+        <div class="lbl">🪙 Crypto — trades 24×7 <span id="cryCount" class="muted"></span></div>
+        <div class="chips" id="cryChips"></div>
+        <button class="more" id="cryMore" onclick="toggleChips('cry')" style="display:none">Show all ▾</button>
+        <div class="lbl">📊 Popular stocks <span id="stkCount" class="muted"></span></div>
+        <div class="chips" id="stkChips"></div>
+        <button class="more" id="stkMore" onclick="toggleChips('stk')" style="display:none">Show all ▾</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:18px">
+      <div class="apbar">
+        <div>
+          <h3 style="margin:0 0 4px">🎯 Market-wide Buy Scanner</h3>
+          <span class="muted small">Scans <b>every</b> Groww stock + <b>every</b> Binance coin with the full engine and ranks the best buys.</span>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button class="btn green" id="scanBtn" onclick="scanStart(this)">Scan entire market</button>
+          <button class="btn ghost" id="scanStopBtn" onclick="scanStop()" style="display:none">Stop</button>
+        </div>
+      </div>
+      <div id="scanProg" class="small muted" style="margin-top:10px"></div>
+      <div style="height:8px;background:var(--bg2);border-radius:6px;overflow:hidden;margin-top:6px">
+        <i id="scanBar" style="display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--blue),var(--violet));transition:width .5s"></i>
+      </div>
+      <div id="scanBreadth"></div>
+      <div id="scanConc" class="small" style="margin-top:10px;color:#fbbf24"></div>
+      <div id="scanFilters" style="display:none;margin-top:14px;gap:8px;flex-wrap:wrap;align-items:center">
+        <span class="muted small" style="font-weight:700;text-transform:uppercase;letter-spacing:.5px">Show</span>
+        <button class="tf fbtn active" data-sk="all" onclick="setScanKind('all',this)">All</button>
+        <button class="tf fbtn" data-sk="crypto" onclick="setScanKind('crypto',this)">🪙 Crypto</button>
+        <button class="tf fbtn" data-sk="stock" onclick="setScanKind('stock',this)">📊 Stocks</button>
+        <select id="scanRating" onchange="loadScanResults(true)"
+          style="background:var(--bg2);border:1px solid var(--line);color:var(--text);padding:7px 9px;border-radius:9px;font-size:12.5px;margin-left:6px">
+          <option value="buy" selected>Buy signals (STRONG BUY · BUY · ACCUMULATE)</option>
+          <option value="STRONG BUY">STRONG BUY only</option>
+          <option value="BUY">BUY only</option>
+          <option value="ACCUMULATE">ACCUMULATE only</option>
+          <option value="STRONG BUY,BUY">STRONG BUY + BUY</option>
+          <option value="all">All ratings (incl. HOLD / SELL)</option>
+        </select>
+        <label class="fld" style="flex-direction:row;align-items:center;gap:6px">score ≥
+          <input id="scanMinScore" type="number" min="0" max="100" value="0" style="width:58px"
+            onchange="loadScanResults(true)"></label>
+        <select id="scanSort" onchange="loadScanResults(true)"
+          style="background:var(--bg2);border:1px solid var(--line);color:var(--text);padding:7px 9px;border-radius:9px;font-size:12.5px">
+          <option value="score">Sort: score, then edge</option>
+          <option value="edge">Sort: edge (quality)</option>
+          <option value="confidence">Sort: confidence</option>
+          <option value="risk">Sort: lowest risk</option>
+          <option value="symbol">Sort: name</option>
+        </select>
+        <span id="scanShowing" class="muted small"></span>
+      </div>
+      <div id="scanTop" style="margin-top:12px"></div>
+      <div style="text-align:center"><button class="btn ghost" id="scanMore" style="display:none;margin-top:10px"
+        onclick="loadScanResults(false)">Load 100 more</button></div>
+      <div style="background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:14px">
+        <div style="font-size:12.5px;font-weight:700;color:var(--muted);margin-bottom:7px">🔑 GROWW TOKEN (paste each morning — unlocks all ~7000 NSE+BSE for the scan &amp; advisor)</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input id="growwTok" type="password" placeholder="Paste today's Groww access token"
+            style="flex:1;min-width:180px;background:var(--card);border:1px solid var(--line);color:var(--text);padding:9px 11px;border-radius:9px;font-size:13px">
+          <button class="btn" style="min-height:40px;padding:0 16px" onclick="saveGrowwToken(this)">Connect</button>
+        </div>
+        <div id="growwTokMsg" class="small muted" style="margin-top:7px">Without a token: crypto + 50 popular stocks. With it: everything.</div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:12px">
+        <div style="font-size:12.5px;font-weight:700;color:var(--muted);margin-bottom:7px">📱 TELEGRAM ALERTS (optional — STRONG BUYs &amp; watchlist changes straight to your phone)</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input id="tgToken" type="password" placeholder="Bot token from @BotFather"
+            style="flex:1;min-width:160px;background:var(--card);border:1px solid var(--line);color:var(--text);padding:9px 11px;border-radius:9px;font-size:13px">
+          <input id="tgChat" placeholder="Chat ID from @userinfobot"
+            style="width:160px;background:var(--card);border:1px solid var(--line);color:var(--text);padding:9px 11px;border-radius:9px;font-size:13px">
+          <button class="btn" style="min-height:40px;padding:0 16px" onclick="saveTelegram(this)">Connect</button>
+        </div>
+        <div id="tgMsg" class="small muted" style="margin-top:7px">Free: in Telegram, message @BotFather → /newbot → copy the token; message @userinfobot → copy your chat ID.</div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:18px">
+      <div class="apbar">
+        <div><h3 style="margin:0 0 4px">🎯 Accuracy target (precision mode)</h3>
+        <span class="muted small">Only issue BUY when the setup's class has <b>measurably</b> hit your target in graded history. Fewer signals is the price of precision — the gate arms itself as history accumulates.</span></div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <label class="fld" style="flex-direction:row;align-items:center;gap:7px">
+            <input type="checkbox" id="pmOn"> On</label>
+          <input id="pmTarget" type="number" min="50" max="85" value="70"
+            style="width:64px;background:var(--bg2);border:1px solid var(--line);color:var(--text);padding:8px;border-radius:9px">
+          <span class="muted small">%</span>
+          <button class="btn" style="min-height:38px;padding:0 16px" onclick="savePrecision(this)">Save</button>
+        </div>
+      </div>
+      <div id="pmStatus" class="small muted" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:18px">
+      <div class="apbar">
+        <div><h3 style="margin:0 0 4px">⭐ Watchlist</h3>
+        <span class="muted small">Followed symbols are re-checked every 30 minutes while the server runs; rating changes ping your Telegram.</span></div>
+        <button class="btn ghost" onclick="refreshWatch(this)">↻ Check now</button>
+      </div>
+      <div id="watchWrap" style="margin-top:12px"></div>
+    </div>
+
+    <div id="result">
+      <div class="verdict" id="verdict">
+        <div class="vtop">
+          <div>
+            <div class="vname"><b id="rName"></b><span id="rSym" class="muted"></span></div>
+            <div class="vprice" id="rPrice"></div>
+            <div id="rLive" class="small" style="margin-top:2px;height:16px"></div>
+            <div id="rApprox" class="small muted" style="margin-top:2px"></div>
+            <div id="rTrack" class="small" style="margin-top:2px;color:#8b96ad"></div>
+            <div id="rGuard" class="small" style="margin-top:4px;color:#fbbf24"></div>
+            <div id="rPrec" class="small" style="margin-top:4px"></div>
+            <button id="watchBtn" class="btn ghost" style="margin-top:10px;min-height:34px;padding:5px 14px;font-size:12.5px" onclick="watchToggle()">☆ Watch</button>
+            <div id="rFx" class="small muted" style="margin-top:2px"></div>
+          </div>
+          <div class="vbadge" id="rBadge"></div>
+        </div>
+        <p class="vsummary" id="rSummary"></p>
+        <div class="vmeters">
+          <div class="meter"><div class="l">Confidence</div><div class="v" id="rConf"></div></div>
+          <div class="meter"><div class="l">Composite score</div><div class="v" id="rComp"></div></div>
+          <div class="meter"><div class="l">Risk level</div><div class="v" id="rRisk"></div></div>
+          <div class="meter"><div class="l">Trend</div><div class="v" id="rTrend" style="font-size:16px"></div></div>
+        </div>
+        <div id="convict" style="margin-top:16px"></div>
+      </div>
+
+      <div class="grid g12" style="margin-bottom:16px">
+        <div class="card">
+          <h3>Price chart</h3>
+          <div class="tfrow" id="tfRow">
+            <button class="tf" data-tf="5m">5m</button><button class="tf" data-tf="10m">10m</button>
+            <button class="tf" data-tf="15m">15m</button><button class="tf" data-tf="1h">1H</button>
+            <button class="tf" data-tf="1d">1D</button><button class="tf" data-tf="1w">1W</button>
+            <button class="tf" data-tf="1mo">1M</button><button class="tf" data-tf="6mo">6M</button>
+            <button class="tf active" data-tf="1y">1Y</button>
+          </div>
+          <div class="legend">
+            <span><i class="dot" style="background:#e8b64c"></i>EMA20</span>
+            <span><i class="dot" style="background:#3b82f6"></i>EMA50</span>
+            <span><i class="dot" style="background:#8b5cf6"></i>EMA200</span>
+            <span><i class="dot" style="background:#22c55e"></i>Supertrend↑</span>
+            <span><i class="dot" style="background:#ef4444"></i>Supertrend↓</span>
+            <span><i class="dot" style="background:#22d3ee"></i>VWAP</span>
+            <span><i class="dot" style="background:#eab308"></i>POC / value area</span>
+            <span><i class="dot" style="background:#f472b6"></i>Anchored VWAP</span>
+            <span><i class="dot" style="background:#94a3b8"></i>Fib 0.5 / 0.618</span>
+            <span><i class="dot" style="background:#f472b6"></i>Anchored VWAP</span>
+            <span><i class="dot" style="background:#eab308"></i>Volume POC / value area</span>
+          </div>
+          <div id="chart" class="chartbox"></div>
+          <div class="muted small" style="margin:8px 0 4px">RSI 14 · 30 oversold / 70 overbought</div>
+          <div id="rsi" class="rsibox"></div>
+        </div>
+        <div class="card">
+          <h3>Trade plan (ATR-based)</h3>
+          <div class="plan">
+            <div class="box"><div class="l">Entry</div><div class="v" id="pEntry"></div></div>
+            <div class="box"><div class="l">Stop</div><div class="v" id="pStop" style="color:#f87171"></div></div>
+            <div class="box"><div class="l">Target 1</div><div class="v" id="pT1" style="color:#4ade80"></div></div>
+            <div class="box"><div class="l">Target 2</div><div class="v" id="pT2" style="color:#4ade80"></div></div>
+            <div class="box"><div class="l">Risk:Reward</div><div class="v" id="pRR"></div></div>
+          </div>
+          <div id="pTiming" class="small" style="margin-top:10px;padding:9px 11px;background:var(--bg2);border:1px solid var(--line);border-radius:9px"></div>
+          <h3 style="margin-top:20px">Why this verdict</h3>
+          <div id="factors"></div>
+        </div>
+      </div>
+
+      <div class="grid g2" style="margin-bottom:16px">
+        <div class="card"><h3>Latest news &amp; sentiment</h3>
+          <div class="newshead"><span class="senti" id="newsSenti"></span>
+            <span class="muted small" id="newsMethod"></span></div>
+          <div id="newsMomentum" class="small" style="margin:0 0 8px"></div>
+          <p class="small" id="newsSummary" style="margin:0 0 10px"></p>
+          <div id="newsList"></div>
+        </div>
+        <div class="card"><h3>AI reasoning</h3><ul class="reasons" id="reasonList"></ul></div>
+      </div>
+
+      <div class="grid g2">
+        <div class="card"><h3>Technical detail</h3><div class="kv" id="techKv"></div>
+          <div id="patterns" style="margin-top:12px"></div></div>
+        <div class="card"><h3>Fundamentals</h3><div class="kv" id="fundKv"></div>
+          <ul class="reasons small" id="fundNotes" style="margin-top:12px"></ul></div>
+      </div>
+      <div class="card" style="margin-top:16px"><h3>🇮🇳 Beyond the chart — India context</h3>
+        <div class="kv" id="indiaKv"></div>
+        <ul class="reasons small" id="indiaNotes" style="margin-top:12px"></ul>
+      </div>
+      <div class="card" style="margin-top:16px"><h3>🔬 Advanced chart analytics</h3>
+        <div class="kv" id="advKv"></div>
+        <ul class="reasons small" id="advNotes" style="margin-top:12px"></ul>
+      </div>
+      <p class="disc" id="disc"></p>
+    </div>
+  </section>
+
+  <section id="v-backtest" class="view">
+    <div class="card" style="margin-bottom:16px">
+      <div class="searchbar">
+        <input id="btSym" list="qlist" value="TCS.NS" style="max-width:220px">
+        <select id="btPeriod" style="background:var(--bg2);border:1px solid var(--line);color:var(--text);border-radius:10px;padding:0 14px">
+          <option value="2y">2 years</option><option value="5y" selected>5 years</option><option value="max">Max</option>
+        </select>
+        <button class="btn" id="btBtn" onclick="backtest()">Run backtest</button>
+        <button class="btn ghost" id="btBatch" onclick="reportCard(this)">📋 Strategy report card (10 stocks)</button>
+        <span id="btStatus" class="muted small" style="align-self:center"></span>
+      </div>
+      <p class="muted small" style="margin:10px 0 0">Replays the strategy on history with 1% risk/trade &amp; costs. Past results never guarantee the future.</p>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="apbar">
+        <div><h3 style="margin:0 0 4px">🧠 Learning — it grades its own past calls</h3>
+        <span class="muted small">Every verdict is saved. After ~5 days, grading checks what price ACTUALLY did (target hit? stop hit?), and future confidence is calibrated to the measured hit rate. It also grades itself automatically once a day while the server runs.</span></div>
+        <button class="btn ghost" id="lrnBtn" onclick="gradeSignals(this)">Grade past signals</button>
+      </div>
+      <div id="lrnOut" style="margin-top:12px"></div>
+      <ul class="reasons small" id="lrnLessons" style="margin-top:8px"></ul>
+    </div>
+    <div class="card" id="rcOut" style="display:none;margin-bottom:16px"><h3>Measured accuracy — the honest numbers</h3>
+      <div class="kv" id="rcKv"></div><div id="rcNote" class="small muted" style="margin-top:10px"></div>
+      <div id="rcTable" style="margin-top:12px"></div></div>
+    <div id="btOut" style="display:none">
+      <div class="card" style="margin-bottom:16px"><h3>Results</h3><div class="kv" id="btKv"></div></div>
+      <div class="card"><h3>Equity curve (₹)</h3><div id="eqChart" style="width:100%;height:280px"></div></div>
+    </div>
+  </section>
+
+  <section id="v-help" class="view">
+    <div class="card" style="margin-bottom:16px"><h3>How the verdict is decided</h3>
+      <ul class="reasons">
+        <li><b>Technical (40%)</b>: EMAs, MACD, RSI, ADX, Supertrend, Bollinger, volume, breakouts, candlesticks → a 0–100 score.</li>
+        <li><b>Fundamentals (25%)</b>: P/E, ROE, debt, margins, growth, cash-flow, promoter &amp; institutional holding.</li>
+        <li><b>News (15%) + Social (5%)</b>: recent headlines scored bullish/bearish.</li>
+        <li><b>Market (15%)</b>: the NIFTY's own trend, since most stocks follow the market.</li>
+        <li>Blended ≥65 with a confirmed uptrend → <b>BUY</b>; ≤40 → <b>SELL</b>; else <b>HOLD</b>.</li>
+      </ul>
+    </div>
+    <div class="card" style="margin-bottom:16px"><h3>Data sources</h3>
+      <ul class="reasons">
+        <li><b>Crypto</b>: Binance public API — free, no key, works instantly, 24×7.</li>
+        <li><b>NSE + BSE stocks</b>: Groww API (₹499/mo token in <b>.env</b>) unlocks all ~7000; without it, the popular stocks above still work via free Yahoo data.</li>
+      </ul>
+    </div>
+    <div class="card"><h3>Honest limits</h3>
+      <ul class="reasons">
+        <li>Verdicts are research signals, <b>not investment advice</b>. No profit is guaranteed.</li>
+        <li>Verify any verdict yourself before acting — this is a research assistant, not a broker.</li>
+        <li>Groww access tokens expire daily; regenerate each morning.</li>
+      </ul>
+    </div>
+  </section>
+</div>
+<div id="toast"></div>
+<script src="/static/vendor/lightweight-charts.standalone.production.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>

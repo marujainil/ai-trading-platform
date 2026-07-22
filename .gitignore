@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+trading.db
+.pytest_cache/
+.groww_token
+.telegram
+.precision
